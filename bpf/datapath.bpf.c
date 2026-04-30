@@ -247,6 +247,36 @@ parse_ipv4_packet_or_pass(__u8 *data, __u8 *data_end, __u64 *l2_len, struct iphd
     return -1;
 }
 
+static __always_inline int
+check_dev_mtu(struct xdp_md *ctx, __u32 ifindex, __u32 l3_len)
+{
+    __u32 mtu_len = l3_len;
+
+    int ret = bpf_check_mtu(ctx, ifindex, &mtu_len, 0, 0);
+    if (ret == 0)
+        return 0;
+
+    if (ret == BPF_MTU_CHK_RET_FRAG_NEEDED) {
+        increase_stats_count(STAT_MTU_DROP);
+        return -1;
+    }
+
+    increase_stats_count(STAT_ABORT);
+    return -1;
+}
+
+static __always_inline int
+check_wan_mtu(struct xdp_md *ctx, struct tunnel_config *cfg, __u16 inner_len)
+{
+    return check_dev_mtu(ctx, cfg->wan_ifindex, OUTER_IP_LEN + GRE_BASE_LEN + inner_len);
+}
+
+static __always_inline int
+check_lan_mtu(struct xdp_md *ctx, __u32 ifindex, __u16 inner_len)
+{
+    return check_dev_mtu(ctx, ifindex, inner_len);
+}
+
 SEC("xdp")
 int
 xdp_gre_encap(struct xdp_md *ctx)
@@ -279,10 +309,8 @@ xdp_gre_encap(struct xdp_md *ctx)
     }
 
     __u16 inner_len = bpf_ntohs(inner_iph->tot_len);
-    if (lan->inner_mtu && inner_len > lan->inner_mtu) {
-        increase_stats_count(STAT_MTU_DROP);
+    if (check_wan_mtu(ctx, cfg, inner_len) < 0)
         return XDP_DROP;
-    }
 
     if (inner_iph->ttl <= 1) {
         increase_stats_count(STAT_PASS);
@@ -482,6 +510,11 @@ xdp_gre_decap(struct xdp_md *ctx)
 
     struct bpf_fib_lookup fib = {};
     bool fast = lookup_lan_nexthop(ctx, cfg, inner_iph_pre, inner_len, &fib);
+
+    if (fast) {
+        if (check_lan_mtu(ctx, fib.ifindex, inner_len) < 0)
+            return XDP_DROP;
+    }
 
     if (bpf_xdp_adjust_head(ctx, OUTER_IP_LEN + GRE_BASE_LEN) < 0) {
         increase_stats_count(STAT_ABORT);

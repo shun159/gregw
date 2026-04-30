@@ -11,4 +11,5 @@ This will allow traffic to be routed through the remote GRE endpoint as shown be
     10.20.0.2.60406 > 203.0.113.2.5201: Flags [.], cksum 0x4bcf (incorrect -> 0x9817), seq 1435217014:1435218438, ack 1, win 64, options [nop,nop,TS val 30967492 ecr 3060651575], length 1424
 ```
 
+On a development laptop, the netns/generic-XDP lab can reach around 28 Gbit/s with 4 parallel iperf3 TCP streams and zero retransmits after MTU and RPS tuning. This number is only a local lab baseline and does not represent production NIC performance.
 I want a powerful machine to run this.

@@ -1,0 +1,14 @@
+wan: wan0
+lans:
+- name: lan0
+  gateway: 192.0.2.1
+  inner_mtu: 8000
+tunnel:
+  local: 192.0.2.1
+  remote: 192.0.2.10
+  fib_lookup: true
+xdp:
+  mode: generic
+  decap: true
+defaults:
+  inner_mtu: 9000

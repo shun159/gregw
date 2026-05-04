@@ -1,15 +1,84 @@
 agre (An experimental GRE gateway)
 ---
 
+An experimental XDP/eBPF IPv4-over-GRE gateway.  
+This project implements a minimal RFC 2784 IPv4-over-GRE datapath using XDP.
 
-This will allow traffic to be routed through the remote GRE endpoint as shown below.
 
-```bash
-02:06:26.887513 IP (tos 0x0, ttl 64, id 0, offset 0, flags [DF], proto GRE (47), length 1500)
-    192.0.2.10 > 192.0.2.1: GREv0, Flags [none], length 1480
-	IP (tos 0x0, ttl 63, id 14272, offset 0, flags [DF], proto TCP (6), length 1476)
-    10.20.0.2.60406 > 203.0.113.2.5201: Flags [.], cksum 0x4bcf (incorrect -> 0x9817), seq 1435217014:1435218438, ack 1, win 64, options [nop,nop,TS val 30967492 ecr 3060651575], length 1424
+In a local single-host validation environment, `agre` reached more than 100 Gbit/s aggregate TCP throughput using XDP.
+```
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[SUM]   0.00-10.00  sec   155 GBytes   133 Gbits/sec  828             sender
+[SUM]   0.00-10.00  sec   155 GBytes   133 Gbits/sec                  receiver
 ```
 
-On a development laptop, the netns/generic-XDP lab can reach around 28 Gbit/s with 4 parallel iperf3 TCP streams and zero retransmits after MTU and RPS tuning. This number is only a local lab baseline and does not represent production NIC performance.
-I want a powerful machine to run this.
+## Architecture
+
+```text
+LAN host(s)
+  |
+  | lan10 / lan20 / ...
+  |
++----------------+
+| agre           |
+|                |
+| LAN ingress    |  IPv4 -> IPv4/GRE
+| WAN ingress    |  IPv4/GRE -> IPv4
++----------------+
+  |
+  | wan0
+  |
+GRE underlay
+  |
+Remote GRE peer
+```
+
+
+### LAN ingress
+
+- Parses Ethernet + IPv4
+- Bypasses ARP, non-IPv4, local gateway traffic, and local LAN-to-LAN traffic
+- Checks MTU before encapsulation
+- Uses kernel FIB to resolve the outer next hop
+- Prepends outer IPv4 + GRE headers
+
+### WAN ingress
+
+- Parses outer IPv4/GRE
+- Validates the GRE peer and GRE header
+- Decapsulates inner IPv4
+- Uses kernel FIB to resolve the LAN-side output interface and MAC address
+
+
+## Configuration example
+
+```yaml
+wan: wan0
+lans:
+- name: lan10
+  gateway: 10.10.0.1
+  inner_mtu: 8000
+- name: lan20
+  gateway: 10.20.0.1
+  inner_mtu: 8000
+tunnel:
+  local: 192.0.2.10
+  remote: 192.0.2.1
+  fib_lookup: true
+xdp:
+  mode: generic
+  decap: true
+defaults:
+  inner_mtu: 9000
+```
+
+## Build and run
+
+```bash
+make
+sudo ./bin/agre -config example/config.yaml
+```
+
+
+
+

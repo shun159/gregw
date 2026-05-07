@@ -43,6 +43,7 @@ const (
 	statDecapSlow
 	statRedirectWan
 	statRedirectLan
+	statIcmpFragNeeded
 	statMax
 )
 
@@ -462,25 +463,26 @@ func firstIPv4Addr(iface *net.Interface) (netip.Addr, error) {
 
 func printStats(objs *bpfObjects) {
 	names := map[uint32]string{
-		statPass:        "pass",
-		statDrop:        "drop",
-		statAbort:       "abort",
-		statEncap:       "encap",
-		statDecap:       "decap",
-		statMtuDrop:     "mtu_drop",
-		statNoConfig:    "no_config",
-		statNoLanConfig: "no_lan_config",
-		statBypass:      "bypass",
-		statFibSuccess:  "fib_success",
-		statFibNoNeigh:  "fib_no_neigh",
-		statFibFail:     "fib_fail",
-		statFibWrongIf:  "fib_wrong_if",
-		statDecapPass:   "decap_pass",
-		statDecapNotGRE: "decap_not_gre",
-		statDecapBadGRE: "decap_bad_gre",
-		statDecapSlow:   "decap_slow",
-		statRedirectWan: "redirect_wan",
-		statRedirectLan: "redirect_lan",
+		statPass:           "pass",
+		statDrop:           "drop",
+		statAbort:          "abort",
+		statEncap:          "encap",
+		statDecap:          "decap",
+		statMtuDrop:        "mtu_drop",
+		statNoConfig:       "no_config",
+		statNoLanConfig:    "no_lan_config",
+		statBypass:         "bypass",
+		statFibSuccess:     "fib_success",
+		statFibNoNeigh:     "fib_no_neigh",
+		statFibFail:        "fib_fail",
+		statFibWrongIf:     "fib_wrong_if",
+		statDecapPass:      "decap_pass",
+		statDecapNotGRE:    "decap_not_gre",
+		statDecapBadGRE:    "decap_bad_gre",
+		statDecapSlow:      "decap_slow",
+		statRedirectWan:    "redirect_wan",
+		statRedirectLan:    "redirect_lan",
+		statIcmpFragNeeded: "icmp_frag_needed",
 	}
 
 	parts := make([]string, 0, len(names))

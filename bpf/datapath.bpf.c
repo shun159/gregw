@@ -13,22 +13,6 @@ char __license[] SEC("license") = "Dual MIT/GPL";
 #define MAX_LAN_PORTS 64
 #define MAX_TX_PORTS 128
 
-#ifndef IPPROTO_GRE
-#define IPPROTO_GRE 47
-#endif
-
-#ifndef IPPROTO_ICMP
-#define IPPROTO_ICMP 1
-#endif
-
-#ifndef ICMP_DEST_UNREACH
-#define ICMP_DEST_UNREACH 3
-#endif
-
-#ifndef ICMP_FRAG_NEEDED
-#define ICMP_FRAG_NEEDED 4
-#endif
-
 #ifndef AF_INET
 #define AF_INET 2
 #endif
